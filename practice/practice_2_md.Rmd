@@ -1,0 +1,813 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load the data of the practice exam:
+```{r}
+load("exam.RData")
+```
+
+## Problem 1
+
+```{r}
+head(ToothGrowth)
+```
+
+We transform the dose variable to a factor,
+
+```{r}
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+```
+
+### 1.1 
+
+We compute the mean tooth length for all the 
+six combinations of supplement types and levels.
+
+```{r}
+combinations <- expand.grid(supp = levels(ToothGrowth$supp), dose = levels(ToothGrowth$dose))
+temp <- apply(combinations, MARGIN = 1, function(x){
+  ix <- ToothGrowth$supp == x[1] & 
+    ToothGrowth$dose == x[2]
+  return( c(mean = mean(ToothGrowth[ix, 1]),
+  se = sd(ToothGrowth[ix, 1]) / sqrt(sum(ix) )))
+} )
+
+means <- cbind(combinations, t(temp) )
+means
+```
+
+### 1.2
+
+We will investigate whether different dose levels have the same
+effect. Perform 0.05-level two sample t-tests with unequal variances to check
+whether to reject the following null hypotheses, and explain the result for each
+hypothesis
+
+*With the OJ method, the dose levels 0.5 and 1.0 mg/day have the same
+effect in tooth length:*
+
+```{r}
+t.test(x = ToothGrowth[ToothGrowth$supp == "OJ" & ToothGrowth$dose == "0.5", 1],
+      y = ToothGrowth[ToothGrowth$supp == "OJ" & ToothGrowth$dose == "1", 1], var.equal = FALSE )
+```
+
+We reject at $\alpha = 0.05$ (p-value = $8.785 \times 10^{-05}$) the 
+null hypothesis that the mean value of 
+the tooth length are the same for subject treated with OJ and dose 
+levels $0.5$ and $1$. 
+
+*With the OJ method, the dose levels 1.0 and 2.0 mg/day have the same
+effect in tooth length.* 
+
+```{r}
+t.test(x = ToothGrowth[ToothGrowth$supp == "OJ" & ToothGrowth$dose == "1", 1],
+      y = ToothGrowth[ToothGrowth$supp == "OJ" & ToothGrowth$dose == "2", 1], var.equal = FALSE )
+```
+
+We reject at $\alpha = 0.05$ (p-value = $0.0392$) the 
+null hypothesis that the mean value of
+the tooth length are the same for subject treated with OJ and dose 
+levels $1$ and $2$. 
+
+*With the VC method, the dose levels 0.5 and 1.0 mg/day have the same
+effect in tooth length:*
+
+```{r}
+t.test(x = ToothGrowth[ToothGrowth$supp == "VC" & ToothGrowth$dose == "0.5", 1],
+      y = ToothGrowth[ToothGrowth$supp == "VC" & ToothGrowth$dose == "1", 1], var.equal = FALSE )
+```
+
+We reject at $\alpha = 0.05$ (p-value = $6.811 \times 10^{-07}$) the 
+null hypothesis that the mean value of 
+the tooth length are the same for subject treated with VC and dose 
+levels $0.5$ and $1$. 
+
+*With the VC method, the dose levels 1.0 and 2.0 mg/day have the same
+effect in tooth length.* 
+
+```{r}
+t.test(x = ToothGrowth[ToothGrowth$supp == "VC" & ToothGrowth$dose == "1", 1],
+      y = ToothGrowth[ToothGrowth$supp == "VC" & ToothGrowth$dose == "2", 1], var.equal = FALSE )
+```
+
+We reject at $\alpha = 0.05$ (p-value = $9.156 \times 10 ^{-5}$) the 
+null hypothesis that the mean value of
+the tooth length are the same for subject treated with VC and dose 
+levels $1$ and $2$. 
+
+### 1.3 
+
+We are interested in whether OJ is more effective than VC.
+Perform 0.05-level two sample t-tests with unequal variances to check whether
+to reject the following null hypotheses:
+
+*With 0.5 mg/day dose level, OJ is less effective than or as effective as VC
+in tooth growth.*
+
+```{r}
+t.test(x = ToothGrowth[ToothGrowth$supp == "OJ" & ToothGrowth$dose == "0.5", 1],
+      y = ToothGrowth[ToothGrowth$supp == "VC" & ToothGrowth$dose == "0.5", 1], var.equal = FALSE, alternative = "greater")
+```
+
+We reject the null hypothesis at $\alpha = 0.05$ (p-value = 
+$0.003179$). 
+
+*With 1.0 mg/day dose level, OJ is less effective than or as effective as VC
+in tooth growth.*
+
+```{r}
+t.test(x = ToothGrowth[ToothGrowth$supp == "OJ" & ToothGrowth$dose == "1", 1],
+      y = ToothGrowth[ToothGrowth$supp == "VC" & ToothGrowth$dose == "1", 1], var.equal = FALSE, alternative = "greater")
+```
+
+We reject the null hypothesis at $\alpha = 0.05$ (p-value = 
+$0.0005192$). 
+
+*With 2.0 mg/day dose level, OJ is less effective than or as effective as VC
+in tooth growth.*
+
+```{r}
+t.test(x = ToothGrowth[ToothGrowth$supp == "OJ" & ToothGrowth$dose == "2", 1],
+      y = ToothGrowth[ToothGrowth$supp == "VC" & ToothGrowth$dose == "2", 1], var.equal = FALSE, alternative = "greater")
+```
+
+We can not reject the null hypothesis at $\alpha = 0.05$ (p-value =
+$0.5181$). 
+
+
+Under which dose level(s) can we say OJ is more effective than VC?
+
+We can say that OJ is more effective than VC under dose levels
+$0.5$ and $1.0$.
+
+
+## Problem 2 
+
+### 2.1 
+
+*Show that when $k=1$, the Weibull distribution with parameters $k=1, \lambda$, reduces to the exponential distribution.* 
+
+The Weibull density is
+\[ f_{WB}(x | k, \lambda) = \frac{k}{\lambda} \left(\frac{x}{\lambda} \right)^{k-1} e^{-(x/\lambda)^k}, \quad x \geq 0  \]
+Thus is $k=1$ it reduces to 
+\[ f_{WB}(x| k = 1, \lambda) =  \frac{1}{\lambda} \left(\frac{x}{\lambda} \right)^{0} e^{-(x/\lambda)} = \frac{1}{\lambda} e^{-(x/ \lambda)} = f_{Exp}(x | r = \frac{1}{\lambda}) \]
+
+Where $f_{Exp}$ is the density function of an exponential random 
+variable.
+
+*What is the rate parameter of the obtained exponential distribution?*
+
+As we can see from the equation above
+\[f_{WB}(x| k = 1, \lambda) = f_{Exp}(x | r = \frac{1}{\lambda})\]
+
+Thus the rate of the obtained exponential distribution is $r = \frac{1}{\lambda}$ where $\lambda$ is the parameter of the Weibull distribution. 
+
+We check it graphically 
+
+```{r}
+curve(dweibull(x, shape = 1, scale = 0.5), col = "blue", 
+      from= 0 , to = 10)
+curve(dexp(x, rate = 1/(0.5)), col = "red", add = TRUE, lty = 2)
+```
+
+They coincide for $\lambda = 0.5 = \frac{1}{r}$. 
+
+### 2.2
+
+The implementation of the minus log-likelihood is:
+```{r}
+mll_wb <- function(par, data){
+  -sum(dweibull(data, shape = par[1], scale = par[2], log = TRUE))
+}
+```
+
+Now we can minimize the minus log-likelihood for the ISI data,
+
+```{r}
+res <- optim(par = c(1,1), fn = mll_wb, data = neuron$isi)
+res$par 
+```
+
+### 2.3 
+
+*Investigate how the Weibull model fits the neuron data by a
+Q-Q plot and comparing with the kernel density estimation.*
+
+We plot histogram, kernel density estimation and fitted Weibull density.
+
+```{r}
+hist(neuron$isi, probability = TRUE, breaks = "FD")
+lines(density(neuron$isi), col = "red")
+curve(dweibull(x, shape = res$par[1], scale = res$par[2]), 
+      col = "blue", add = TRUE)
+legend("right", legend = c("kernel", "weibull"), col = c("red", "blue"),
+       lty = 1)
+```
+
+Q-Q plot 
+
+```{r}
+p <- ppoints(neuron$isi)
+q_wb <- qweibull(p, shape = res$par[1], scale = res$par[2])
+plot(sort(neuron$isi), q_wb, xlab = "emp quant", ylab = "weib quant",
+     main = "Q-Q plot")
+abline(0, 1, col = "red")
+```
+
+From the two plots we can see that the Weibull distribution fits 
+quite well the data. 
+
+### 2.4 
+
+*Compute confidence intervals for $k$ and $\lambda$ using parametric and
+non-parametric bootstrap, use both normal confidence interval and percentile
+confidence intervals.*
+
+Using non-parametric bootstrap, 
+
+```{r}
+M <- 1000
+par_bt <- replicate(M, {
+  temp <- sample(neuron$isi, replace = TRUE)
+  pr <- optim(par = c(1,1), fn = mll_wb, data = temp)$par
+  return(c(k = pr[1], lambda = pr[2]))
+})
+se <- apply(par_bt, MARGIN = 1, function(x) sd(x))
+```
+
+We show 95% confidence intervals for $k$ and $\lambda$, using 
+asymptotic normality,
+
+```{r}
+a <- 0.05
+z <- qnorm(1 - a / 2)
+
+matrix(res$par + z * se %*% t(c(-1, +1)), dimnames = list(c("k", "lambda"), c("a", "b")), ncol = 2  )
+```
+
+The percentile confidence intervals can be obtained directly from 
+the sample of the bootstrap,
+```{r}
+t(apply(par_bt, MARGIN = 1, function(x) quantile(x, probs = 
+                                                 c(a/2, 1- a/2))))
+```
+
+Parametric bootstrap is similar but the generation of 
+the sample is done using the Weibull distribution (in this case),
+```{r}
+par_bt <- replicate(M, {
+  temp <- rweibull(length(neuron$isi), shape = res$par[1], 
+                   scale = res$par[2] )
+  pr <- optim(par = c(1,1), fn = mll_wb, data = temp)$par
+  return(c(k = pr[1], lambda = pr[2]))
+})
+
+## normal CI
+matrix(res$par + z * se %*% t(c(-1, +1)), dimnames = list(c("k", "lambda"), c("a", "b")), ncol = 2  )
+
+##percentile CI
+t(apply(par_bt, MARGIN = 1, function(x) quantile(x, probs = 
+                                                 c(a/2, 1- a/2))))
+```
+
+### 2.5
+
+We fit the exponential distribution to the data,
+```{r}
+r_est <- 1 / mean(neuron$isi)
+```
+
+We compute AIC, BIC for both model
+
+```{r}
+aic_exp <- -2*sum(dexp(neuron$isi, rate = r_est, log = TRUE)) + 2
+bic_exp <- -2*sum(dexp(neuron$isi, rate = r_est, log = TRUE)) + 2 * log(length(neuron$isi))
+
+aic_wb <- 2 * res$value + 2 * 2 
+bic_wb <- 2 * res$value + 2 * log(length(neuron$isi))
+
+matrix(c(aic_exp, bic_exp, aic_wb, bic_wb), ncol = 2, 
+       dimnames = list(c("aic", "bic"), c("exp", "weibull")))
+```
+
+The Weibull model is selected by both AIC and BIC. 
+
+We can also perform likelihood-ratio test since, as we observe at the beginning, the exponential model is nested in the Weibull model. 
+
+```{r}
+ll_exp <- sum(dexp(neuron$isi, rate = r_est, log = TRUE))
+ll_weib <- -res$value
+delta <- -2 * ( ll_exp - ll_weib   )
+## p-value
+pchisq(delta, lower.tail = FALSE, df = 1)
+```
+
+The p-value is equal to $2.21 \times 10^{-6}$ thus we reject the 
+null hypothesis that $k=1$ (Exp model) at $\alpha = 0.001$ (for example). 
+Also the likelihood-ratio test indicates that the Weibull model it
+to prefer.
+
+## Problem 3 
+
+
+### 3.1 
+
+We implement the density of the Gaussian mixture, we parametrize it
+with standard deviations $\sigma_1, \sigma_2$. 
+
+```{r}
+dgaussmix <- function(x, mean1, sd1, mean2, sd2, w){
+  stopifnot(w <= 1 && w >= 0)
+  stopifnot(sd1 > 0 && sd2 > 0)
+  w * dnorm(x, mean1, sd1) + (1 - w) * dnorm(x, mean2, sd2)
+}
+
+curve(dgaussmix(x, 2, 1, 5, 1, 0.3), from = -5, to = 10, 
+      main = "GM(2,1,5,1, 0.3)", ylab = "density")
+```
+
+
+
+### 3.2 
+
+To obtain initial guess for the parameter of the Gaussian mixture 
+for the longitude locations we plot the histogram
+
+```{r}
+hist(quakes$long, probability = TRUE, breaks = "FD")
+```
+
+We can divide the longitude location observations in two groups,
+before and after 175.
+
+```{r}
+bef <- quakes$long[quakes$long < 175]
+aft <- quakes$long[quakes$long > 175]
+```
+
+We can now consider the following initial estimate for the 
+Gaussian mixture:
+
+```{r}
+m1.init <- mean(bef)
+sd1.init <- sd(bef)
+m2.init <- mean(aft)
+sd2.init <- sd(aft)
+w.init <- length(bef) / length(aft)
+par.init <- c(m1.init, sd1.init, m2.init, sd2.init, w.init)
+par.init
+```
+
+We define now the minus log-likelihood and then start the optimization,
+
+```{r}
+mll <- function(par, data){
+  if (par[5] > 1 || par[5] < 0 ){
+    return(Inf)
+  }
+  if (par[2] < 0 || par[4] < 0){
+    return(Inf)
+  }
+  -sum(log(dgaussmix(data, par[1], par[2], par[3], par[4], par[5])))
+}
+par.est <- optim(par = par.init, fn = mll, data = quakes$long)$par
+par.est
+```
+
+We now plot the fitted mixture on top of the histogram.
+
+```{r}
+hist(quakes$long, probability = TRUE, breaks = "FD")
+curve(dgaussmix(x, par.est[1], par.est[2], par.est[3], par.est[4], par.est[5]), add = TRUE, col = "red")
+```
+
+### 3.3 
+
+We here fit the longitudinal data to a simple Gaussian model, we use
+the known formula for the MLE of a Gaussian model,
+\[ \hat{\mu} = \overline{X} \quad \hat{\sigma} = \sqrt{ \frac{1}{n}  \sum_{i=1}^n \left(X_i - \hat{\mu} \right)^2} \]
+
+```{r}
+mu_est <- mean(quakes$long)
+sigma_est <- sd(quakes$long)
+hist(quakes$long, probability = TRUE, breaks = "FD")
+curve(dnorm(x, mu_est, sigma_est), add = TRUE, col = "blue")
+```
+
+It seems that the mixture model fit the data much better. 
+
+### 3.4 
+
+We compare now the mixture and the simple Gaussian model using AIC
+
+```{r}
+aic.mixture <- 2*mll(par.est, data = quakes$long) +  2 * length(par.est) 
+aic.gauss <- -2*sum(dnorm(quakes$long, mu_est, sigma_est, log = TRUE)) + 2 * 2 
+c(mixture = aic.mixture, gauss = aic.gauss)
+```
+
+Thus by the AIC score the mixture model should be preferred.
+
+The BIC:
+```{r}
+n <- nrow(quakes)
+bic.mixture <- 2*mll(par.est, data = quakes$long) + log(n) * length(par.est) 
+bic.gauss <- -2*sum(dnorm(quakes$long, mu_est, sigma_est, log = TRUE)) + 2 * log(n)
+c(mixture = bic.mixture, gauss = bic.gauss)
+```
+
+Similarly also the BIC score indicates that the mixture model 
+should be selected
+
+### 3.5 
+
+We repeat now the model selection between mixture and Gaussian model for
+other variables `lat`, `depth`.
+
+
+For `lat`:
+```{r}
+par.lat <- optim(par = c(-25, 4, -15, 4, 0.5), fn = mll, 
+                 data = quakes$lat)$par
+mu.lat <- mean(quakes$lat)
+sigma.lat <- sd(quakes$lat)
+hist(quakes$lat, probability = TRUE, breaks = "FD")
+curve(dgaussmix(x, par.lat[1], par.lat[2],
+                par.lat[3], par.lat[4], par.lat[5]), add = TRUE,
+      col = "red")
+curve(dnorm(x, mean = mu.lat, sd = sigma.lat), col = "blue", add = TRUE)
+legend("topleft", legend = c("mixture", "gaussian"), 
+       col = c("red", "blue"), lty = 1)
+
+aic.mixture <- 2*mll(par.lat, data = quakes$lat) +  2 * length(par.lat) 
+aic.gauss <- -2*sum(dnorm(quakes$lat, mu.lat, sigma.lat, log = TRUE)) + 2 * 2 
+c(mixture = aic.mixture, gauss = aic.gauss)
+bic.mixture <- 2*mll(par.lat, data = quakes$lat) + log(n) * length(par.lat) 
+bic.gauss <- -2*sum(dnorm(quakes$lat, mu.lat, sigma.lat, log = TRUE)) + 2 * log(n)
+c(mixture = bic.mixture, gauss = bic.gauss)
+```
+
+The mixture model is to prefer (AIC and BIC).
+
+For the `depth` observations:
+```{r}
+par.depth <- optim(par = c(100, 100, 600, 100, 0.5), fn = mll, 
+                 data = quakes$depth)$par
+mu.depth <- mean(quakes$depth)
+sigma.depth <- sd(quakes$depth)
+hist(quakes$depth, probability = TRUE, breaks = "FD")
+curve(dgaussmix(x, par.depth[1], par.depth[2],
+                par.depth[3], par.depth[4], par.depth[5]), add = TRUE,
+      col = "red")
+curve(dnorm(x, mean = mu.depth, sd = sigma.depth), col = "blue", add = TRUE)
+legend("topleft", legend = c("mixture", "gaussian"), 
+       col = c("red", "blue"), lty = 1)
+
+aic.mixture <- 2*mll(par.depth, data = quakes$depth) +  2 * length(par.depth) 
+aic.gauss <- -2*sum(dnorm(quakes$depth, mu.depth, sigma.depth, log = TRUE)) + 2 * 2 
+c(mixture = aic.mixture, gauss = aic.gauss)
+bic.mixture <- 2*mll(par.depth, data = quakes$depth) + log(n) * length(par.depth) 
+bic.gauss <- -2*sum(dnorm(quakes$depth, mu.depth, sigma.depth, log = TRUE)) + 2 * log(n)
+c(mixture = bic.mixture, gauss = bic.gauss)
+```
+The mixture model is again selected by both AIC and BIC
+
+
+### 3.6 
+
+In this question we consider a generalized linear model with
+the log link and stations follows a Gaussian distribution. 
+
+\[ \log(\mathbb{E}(\mathtt{stations}|...)) = \beta_0 + 
+\beta_1 \mathtt{lat} + \beta_2\mathtt{long} + 
+\beta_3\mathtt{depth} + \beta_4\mathtt{mag} \tag{1} \]
+
+```{r}
+fit1 <- glm(stations ~ ., data = quakes, 
+            family = gaussian(link = "log"))
+summary(fit1)
+```
+
+Since it is intuitive that stronger earthquakes are more likely to be detected,
+we assume that stations is more related to mag. Fit the following model:
+
+\[ \log(\mathbb{E}(\mathtt{stations}|...)) = \beta_0 + 
+\beta_1 \mathtt{lat} + \beta_2\mathtt{long} + 
+\beta_3\mathtt{depth} + \beta_4\mathtt{mag} + \beta_5 \mathtt{mag}^2 \tag{2}\]
+
+```{r}
+fit2 <- glm(stations ~ . + I(mag^2), data = quakes, 
+            family = gaussian(link = "log"))
+summary(fit2)
+```
+
+The recorded magnitude is actually in the Richter scale which is a 
+log scale
+of the earthquake wave amplitude. We thus transform now the Richter
+scale
+back to the original scale. Fit the model:
+
+\[ \log(\mathbb{E}(\mathtt{stations}|...)) = \beta_0 + 
+\beta_1 \mathtt{lat} + \beta_2\mathtt{long} + 
+\beta_3\mathtt{depth} + \beta_4\exp(\mathtt{mag}) + \beta_5 \exp(\mathtt{mag})^2 \tag{3}\]
+
+```{r}
+fit3 <- glm(stations ~ lat + long + depth + exp(mag) +
+              I(exp(mag)^2), 
+            data = quakes, family = gaussian(link = "log"))
+summary(fit3)
+```
+
+### 3.7
+
+*Perform the log likelihood ratio test selection between model
+1 and model 2.*
+
+```{r}
+anova(fit1, fit2, test = "LRT")
+```
+
+The p-value is very small and we thus reject the null hypothesis (e.g. at a level $0.0005$)
+that the simpler model `fit1` is sufficient. 
+
+*Use instead AIC and BIC to perform model selection between
+model 1, model 2 and model 3.*
+
+```{r}
+models <- list(fit1 = fit1, fit2 = fit2, fit3 = fit3)
+sapply(models, function(m){
+  c(AIC = AIC(m), BIC = BIC(m))
+})
+```
+
+Model 2 is selected by both AIC and BIC.
+
+### 3.8
+
+*We observe now that $\mathtt{stations}$ are actually positive counts.
+It is thus natural to use the Poisson regression model. Fit then the Poisson
+regression models with the log link function:*
+
+\[ \log(\mathbb{E}(\mathtt{stations}|...)) = \beta_0 + 
+\beta_1 \mathtt{lat} + \beta_2\mathtt{long} + 
+\beta_3\mathtt{depth} + \beta_4\mathtt{mag} \tag{4} \]
+
+```{r}
+fit4 <- glm(stations ~ ., data = quakes, 
+            family = poisson(link = "log"))
+summary(fit4)
+```
+
+\[ \log(\mathbb{E}(\mathtt{stations}|...)) = \beta_0 + 
+\beta_1 \mathtt{lat} + \beta_2\mathtt{long} + 
+\beta_3\mathtt{depth} + \beta_4\mathtt{mag} + \beta_5 \mathtt{mag}^2 \tag{5} \]
+
+```{r}
+fit5 <- glm(stations ~ lat + long + depth + mag +
+              I(mag^2), 
+            data = quakes, family = poisson(link = "log"))
+summary(fit5)
+```
+\[ \log(\mathbb{E}(\mathtt{stations}|...)) = \beta_0 + 
+\beta_1 \mathtt{lat} + \beta_2\mathtt{long} + 
+\beta_3\mathtt{depth} + \beta_4\exp(\mathtt{mag}) + \beta_5 \exp(\mathtt{mag})^2 \tag{6}\]
+
+```{r}
+fit6 <- glm(stations ~ lat + long + depth + exp(mag) +
+              I(exp(mag)^2), 
+            data = quakes, family = poisson(link = "log"))
+summary(fit6)
+```
+
+*Perform model selection between model 4 and model 5 using the `anova`
+function. Perform model selection between the three Poisson regression models
+using AIC and BIC.*
+
+anova:
+```{r}
+anova(fit4, fit5, test = "LRT")
+```
+
+model 5 (`fit5`) is selected, since we reject the null hypothesis that the simpler model
+is sufficient. 
+
+```{r}
+models <- list(fit4 = fit4, fit5 = fit5, fit6 = fit6)
+sapply(models, function(m){
+  c(AIC = AIC(m), BIC = BIC(m))
+})
+```
+
+Model 5 (`fit5`) is selected by both AIC and BIC.
+
+
+### 3.9
+
+*Consider the generalized linear regression model with the in-
+verse link function l(y) = 1/y:*
+
+\[ \frac{1}{\mathbb{E}(\mathtt{stations}|... ) } =  \beta_0 + 
+\beta_1 \mathtt{lat} + \beta_2\mathtt{long} + 
+\beta_3\mathtt{depth} + \beta_4\mathtt{mag} + \beta_5 \mathtt{mag}^2 \]
+
+*Where $\mathtt{stations}|...$ follows a gamma distribution.
+Fit this model to the $\mathtt{quakes}$ data. Take a look to the relevant information
+about the distribution and the link function `?family`.*
+
+```{r}
+fit7 <- glm(stations ~ . + I(mag^2), data = quakes,
+            family = Gamma(link = "inverse" ))
+summary(fit7)
+```
+
+## Problem 4
+
+In this problem we analyze the beerfoam data. The data set contains 13 
+observations of measurements of wet foam height and beer height at various time
+points for Shiner Bock at 20C.
+
+### 4.1 
+
+We fit a simple linear regression model for the foam height as a function of the time. 
+
+```{r}
+fit1 <- lm(foam ~ t, data = beerfoam)
+summary(fit1)
+```
+
+We plot the observations (black) and the fitted regression (red)
+
+```{r}
+##we plot also the observations
+plot(beerfoam$t, beerfoam$foam)
+abline(fit1, col = "red")
+```
+
+The model does not seem very good, we check also the residual vs the predictor and the residuals normal Q-Q plot.
+
+```{r}
+plot(beerfoam$t, fit1$residuals)
+```
+
+The residuals vs predictor plot shows a clear dependency between time and residuals, that 
+is a clear hint that the model is incorrect.
+
+Moreover the Q-Q plot against normal quantiles shows a departure from normality:
+```{r}
+qqnorm(fit1$residuals)
+qqline(fit1$residuals)
+```
+
+### 4.2
+
+We fit now a quadratic regression model. 
+
+```{r}
+fit2 <- lm(foam ~ t + I(t^2), data = beerfoam)
+summary(fit2)
+```
+
+We plot the observations and the fitted curve
+```{r}
+plot(beerfoam$t, beerfoam$foam)
+tt <- seq(min(beerfoam$t), max(beerfoam$t), length.out = 100)
+yy <- predict(fit2, newdata = data.frame(t = tt))
+lines(tt, yy, col = "red")
+```
+
+The curve fitted seems good, surely better than the simple linear
+regression. 
+
+We perform model selection with AIC, BIC
+```{r}
+cands <- list(fit1 = fit1, fit2 = fit2)
+sapply(cands, function(m) c(aic = AIC(m), bic = BIC(m)))
+```
+
+As expected the quadratic regression model is selected by both scores. 
+
+We perform also the F-test
+```{r}
+anova(fit1, fit2)
+```
+
+And clearly the null hypothesis that the simple regression 
+is sufficient is rejected (the p-value is very small).
+
+We now observe that even if the quadratic model fit well the
+data in the range of the observed values, the behavior of the model 
+is at least strange when we predict outside of the range of the 
+observations. 
+
+```{r}
+plot(beerfoam$t, beerfoam$foam, xlim = c(-100, 700), ylim = c(-10,+50))
+tt <- seq(-100, 700, length.out = 500)
+yy <- predict(fit2, newdata = data.frame(t = tt))
+lines(tt, yy, col = "red")
+```
+
+In particular the model predict that the height of the beer foam will 
+increase after some time (that is a strange
+behavior)
+
+### 4.3 
+
+We fit the linear regression for $\log(\mathtt{foam})$. 
+```{r}
+fit3 <- lm(log(foam) ~ t, data = beerfoam)
+```
+
+And we plot the regression function on top of the points:
+
+```{r}
+plot(beerfoam$t, (beerfoam$foam), xlim = c(-10, 400), ylim = c(-5,+25))
+xx <- seq(0, 400, length.out = 1000)
+yy <- exp(predict(fit3, newdata = data.frame(t = xx)))
+points(xx, yy, type = "l", col = "red")
+```
+
+
+Model selection:
+
+```{r}
+AIC(fit1, fit2, fit3)
+
+BIC(fit1, fit2, fit3)
+```
+ 
+### 4.4
+
+Plot the points:
+
+```{r}
+plot(beerfoam$beer, beerfoam$foam)
+```
+
+We could try a simple straight line (but we can guess that will not work
+well):
+
+```{r}
+model1 <- lm(foam ~ beer, data = beerfoam)
+plot(beerfoam$beer, beerfoam$foam)
+abline(model1)
+
+plot(beerfoam$beer, residuals(model1))
+```
+
+From the plot of the residuals we observe that the simple linear model 
+is probably not appropriate. 
+
+We could try a polynomial regression.
+
+```{r}
+model2 <- lm(foam ~ beer + I(beer^2), data = beerfoam)
+summary(model2)
+
+##
+plot(beerfoam$beer, beerfoam$foam)
+xx <- seq(1,7,length.out = 100)
+yy <- predict(model2, newdata = data.frame(beer = xx))
+points(xx, yy, type = "l", col = "red")
+
+
+## residuals
+plot(beerfoam$beer, residuals(model2))
+```
+
+We can also try the polynomial model $\mathtt{foam} = \mathtt{beer}^2$, 
+since in `model2` the coefficient for $\mathtt{beer}$ is not significant. 
+
+```{r}
+model3 <- lm(foam ~ I(beer^2), data = beerfoam)
+summary(model3)
+
+##
+plot(beerfoam$beer, beerfoam$foam)
+xx <- seq(1,7,length.out = 100)
+yy <- predict(model3, newdata = data.frame(beer = xx))
+points(xx, yy, type = "l", col = "red")
+
+
+## residuals
+plot(beerfoam$beer, residuals(model3))
+```
+
+
+And:
+
+```{r}
+AIC(model1, model2, model3)
+BIC(model1, model2, model3)
+```
+
+Moreover the F-test
+
+```{r}
+anova(model3, model2)
+```
+
+
+From the above model selection procedure we can argue that 
+among the three models tested `model3` is to prefer. 
+

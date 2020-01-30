@@ -1,0 +1,319 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+<!-- ## Ex 1 a Trigonometric density -->
+
+<!-- The function $sin(x)^k$ in the interval $[0,\pi]$ can be plotted with, -->
+
+<!-- ```{r} -->
+<!-- temp <- FALSE -->
+<!-- for (k in 1:10){ -->
+<!--   curve(sin(x)^k, col = k, add = temp, from = 0, to = pi) -->
+<!--   temp <- TRUE -->
+<!-- } -->
+<!-- ``` -->
+
+<!-- As we can see the functions $sin(x)^k$ are non-negative in the interval  -->
+<!-- $[0,\pi]$, but they are not densities since the integrals are not 1,  -->
+<!-- for example (try to change the value of $k$ and run the following): -->
+
+<!-- ```{r} -->
+<!-- k <- 2 -->
+<!-- integrate(function(x){ sin(x)^k}, lower = 0, upper = pi ) -->
+<!-- ``` -->
+
+<!-- So in order to write the desnity we have to normalize it, in particular  -->
+<!-- \[ f(x|k) = \frac{sin(x)^k}{\int_0^{\pi} sin(t)^k dt} \].  -->
+
+<!-- We can now solve exercise 1.1 -->
+
+<!-- ### 1.1  -->
+
+<!-- ```{r} -->
+<!-- dsin <- function(x, k = 1){ -->
+<!--   const <- integrate(function(t){ sin(t)^k }, lower = 0, upper = pi)$value -->
+<!--   if (x < 0 || x > pi){ -->
+<!--     return(0) -->
+<!--   } -->
+<!--   return( (sin(x) ^ k )/ const ) -->
+<!-- } -->
+<!-- ``` -->
+
+<!-- lets do some plots, -->
+
+<!-- ```{r} -->
+<!-- temp <- FALSE -->
+<!-- for (k in 1:10){ -->
+<!--   curve(dsin(x, k = k), col = k, add = temp, from = 0, to = pi,  -->
+<!--         ylim =  c(0,1.4)) -->
+<!--   temp <- TRUE -->
+<!-- } -->
+<!-- ``` -->
+
+
+<!-- and we check that those densities (for $k = 1,...,20$) integrate to 1, -->
+
+<!-- ```{r} -->
+<!-- all( abs(sapply(1:20, function(i){ -->
+<!--   return(integrate(dsin, lower = 0, upper = pi, k = i)$value) -->
+<!-- }) - 1) < 1e-15  ) -->
+<!-- ``` -->
+
+
+<!-- We are actually checking that the integrals are close to 1 since integrals are not exacts but done numerically.  -->
+
+<!-- Because the  integrals are done numerically we can expect errors when $k$ is big.  -->
+<!-- Try with $k$ up to  $200$ or more.  -->
+
+
+<!-- ### 1.2  -->
+
+<!-- To define the cumulative distribution function, we use the definition -->
+<!-- \[ F_X(x) = \int_{-\infty}^x f_X(x)dx = P(X \leq x) \] -->
+
+<!-- ```{r} -->
+<!-- psin <- Vectorize(function(q, k = 1){ -->
+<!-- if (q > pi){ -->
+<!--   return(1) -->
+<!-- } -->
+<!-- if ( q < 0){ -->
+<!--   return(0) -->
+<!-- } -->
+<!--  const <- integrate(function(t){ sin(t)^k }, lower = 0, upper = pi)$value -->
+<!--  integrate(function(t){ sin(t)^k }, lower = 0, upper = q)$value / const -->
+<!-- }, vectorize.args = "q") -->
+
+<!-- ``` -->
+
+<!-- ### 1.3  -->
+
+<!-- ```{r} -->
+<!-- temp <- FALSE -->
+<!-- for (k in 1:10){ -->
+<!--   curve(psin(x, k = k), col = k, add = temp, from = 0, to = pi,  -->
+<!--         ylim =  c(0,1.4)) -->
+<!--   temp <- TRUE -->
+<!-- } -->
+<!-- legend("left", legend = 1:10, col = 1:10, lty = 1) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- temp <- FALSE -->
+<!-- for (k in 1:10){ -->
+<!--   curve(dsin(x, k = k), col = k, add = temp, from = 0, to = pi,  -->
+<!--         ylim =  c(0,1.4)) -->
+<!--   temp <- TRUE -->
+<!-- } -->
+<!-- legend("left", legend = 1:10, col = 1:10, lty = 1) -->
+<!-- ``` -->
+
+
+<!-- ### 1.4  -->
+
+<!-- To obtain variance and mean value we can use again the `integrate` -->
+<!-- function. -->
+
+<!-- ```{r} -->
+
+<!-- k <- 5 -->
+
+<!-- ## moment of order 1, the mean value -->
+<!-- m1 <- integrate( function(x){ x*dsin(x, k)}, lower = 0, upper = pi)$value -->
+<!-- ## moment of order 2  -->
+<!-- m2 <- integrate( function(x){ x^2*dsin(x, k)}, lower = 0, upper = pi)$value -->
+<!-- paste( "Mean:", m1, "Variance:", m2 - m1^2 )  -->
+
+<!-- ``` -->
+
+<!-- The distributions are simmetric around $\pi/2$ thus the mean value  -->
+<!-- should always be $\pi/2$, we can check it.  -->
+
+<!-- ```{r} -->
+<!-- sapply(1:10, function(k){ -->
+<!--   integrate( function(x){ x*dsin(x, k)}, lower = 0, upper = pi)$value -->
+<!-- }) -->
+<!-- ``` -->
+
+<!-- The variance instead decrease with $k$.  -->
+
+<!-- ```{r} -->
+<!-- vars <- sapply(1:10, function(k){ -->
+<!--   m1 <- integrate( function(x){ x*dsin(x, k)}, lower = 0, upper = pi)$value -->
+<!--   m2 <- integrate( function(x){ x^2*dsin(x, k)}, lower = 0, upper = pi)$value -->
+<!--   return(m2 - m1^2) -->
+<!-- }) -->
+<!-- plot(1:10, vars, main = "Variance as a function of k", xlab = "k", -->
+<!--      ylab = "var", col = "blue") -->
+<!-- ``` -->
+
+<!-- ### 1.5  -->
+
+<!-- We can define first of all the quantile function -->
+
+<!-- ```{r} -->
+<!-- qsin <- function(p, k = 1){ -->
+<!--   uniroot(function(x){ -->
+<!--     psin(x, k) - p    -->
+<!--   }, interval = c(0, pi), extendInt = "upX")$root -->
+<!-- } -->
+
+<!-- qsin( psin(pi/2, k = 5), k = 5 ) ##should be pi/2 -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- rsin <- function(n, k = 1) { -->
+<!--   return(sapply(runif(n), qsin, k = k)) -->
+<!-- } -->
+
+<!-- rsin(10) -->
+<!-- ``` -->
+
+<!-- ### 1.6  -->
+
+<!-- We do it for $k = 5$  -->
+
+<!-- ```{r} -->
+<!-- k <- 5 -->
+<!-- S <- rsin(1000, k = k ) -->
+<!-- hist(S, probability = TRUE, breaks = "FD") -->
+<!-- curve(dsin(x, k), add = TRUE, col = "blue") -->
+<!-- ``` -->
+
+<!-- We repeat it for $k = 12$  -->
+
+<!-- ```{r} -->
+<!-- k <- 12 -->
+<!-- S <- rsin(1000, k = k ) -->
+<!-- hist(S, probability = TRUE, breaks = "FD") -->
+<!-- curve(dsin(x, k), add = TRUE, col = "blue") -->
+<!-- ``` -->
+
+<!-- And $k = 1$ -->
+
+<!-- ```{r} -->
+<!-- k <- 1 -->
+<!-- S <- rsin(1000, k = k ) -->
+<!-- hist(S, probability = TRUE, breaks = "FD") -->
+<!-- curve(dsin(x, k), add = TRUE, col = "blue") -->
+<!-- ``` -->
+
+
+<!-- ## Ex 2 Neuronal ISI data  -->
+
+<!-- ```{r} -->
+<!-- isidata <- read.table("neuronspikes.txt", col.names = "isi") -->
+<!-- isi <- isidata$isi ##here we have the vector of observations -->
+<!-- ``` -->
+
+<!-- ### 2.1 -->
+
+<!-- Kernel density estimation  -->
+
+<!-- ```{r} -->
+<!-- plot(density(isi, bw = "nrd0", kernel = "epanechnikov")) -->
+<!-- ``` -->
+
+<!-- ### 2.2 - 2.3 -->
+
+
+<!-- ```{r} -->
+<!-- hist(isi, breaks = "FD", probability = TRUE) -->
+<!-- curve(dexp(x, rate = 1/mean(isi)), col = "blue", add = TRUE) -->
+<!-- points(density(isi, bw = "nrd0", kernel = "epanechnikov"), type = "l", col = "red") -->
+<!-- ``` -->
+
+<!-- ### 2.4 -->
+
+<!-- ```{r} -->
+<!-- hist(isi, breaks = "FD", probability = TRUE) -->
+<!-- curve(dgamma(x, rate = 1.79, shape = 1.56), col = "blue", add = TRUE) -->
+<!-- points(density(isi, bw = "nrd0", kernel = "epanechnikov"), type = "l", col = "red") -->
+<!-- ``` -->
+
+
+<!-- ## Ex 3  -->
+
+<!-- ### 3.1  -->
+
+<!-- ```{r} -->
+<!-- probs <- ppoints(isi) -->
+<!-- plot(sort(isi), qexp(probs, rate = 1.15)) -->
+<!-- abline(a = 0, b = 1, col = "red") -->
+<!-- ``` -->
+
+<!-- ### 3.2  -->
+
+<!-- ```{r} -->
+<!-- probs <- ppoints(isi) -->
+<!-- plot(sort(isi), qgamma(probs, rate = 1.79, shape = 1.56)) -->
+<!-- abline(a = 0, b = 1, col = "red") -->
+<!-- ``` -->
+
+## Ex 4
+
+
+## Ex 5
+
+
+
+
+
+## Ex 6 Empirical mean and variance
+
+
+### 6.1 
+
+```{r}
+experiment <- function(n){
+  S <- rbinom(n, size = 100, prob = 0.3)
+  m <- mean(S)
+  v <- var(S)
+  sd <- sqrt(var(S))
+  return(c(m, v, sd))
+}
+experiment(100)
+```
+
+Comparing true mean $\mathbb{E}(X) = 100 \times 0.3 = 30$ and empirical mean,
+```{r}
+D <- sapply(c(10, 100, 1000, 10000), experiment)
+plot(c(10, 100, 1000, 10000), D[1,],
+     xlab = "sample size", ylab = "empirical mean", 
+     log = "x")
+abline(h = 30, col = "red")
+legend("right", legend = "True mean", col = "red", 
+       lty = 1 )
+```
+
+Comparing the true variance $\mathbb{V}(X) = 100 
+\times 0.3 \times (1 - 0.3)= 21$,
+
+```{r}
+plot(c(10, 100, 1000, 10000), D[2,],
+     xlab = "sample size", ylab = "empirical variance"
+     , log = "x")
+abline(h = 21, col = "red")
+legend("right", legend = "True variance", 
+       col = "red",
+       lty = 1 )
+```
+
+
+### 6.2
+
+```{r}
+big_experiment <- function(n){
+  S <- replicate(n = 1000, experiment(n))
+  hist(S[1,], breaks = "FD", probability = TRUE,
+       main = paste("n=", n))
+  v <- var(S[1,])
+  se <- S[3,1] / sqrt(n)
+  curve( dnorm(x, mean = 30, sd = se), add = TRUE, 
+         col = "red")
+  return( c(v, sqrt(v), se))
+}
+
+sapply( 10^(1:4), big_experiment)
+```

@@ -1,0 +1,829 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Some artificial experiments 
+
+### Ex 1
+
+#### 1.1 
+
+We generate data from the model
+\[ X \sim N(0, \sigma_1^2)  \]
+\[ Y|X = x \sim N(a x + b, \sigma_2^2)\]
+
+```{r}
+sigma1 <- 2
+sigma2 <- 3
+a <- -1
+b <- 6 
+n <- 50
+```
+
+Since the model is described on terms of the distribution of $X$ and 
+of the conditional distribution of $Y$ given $X=x$ it is natural to 
+sample first observations for $X$ and then the corresponding observations 
+of $Y$. 
+
+```{r}
+x <- rnorm(n, mean = 0, sd = sigma1)
+```
+
+
+Now we use the fact that $Y|X=x$ can be written as 
+\[ Y = ax + b + \sigma_2 Z  \]
+where $Z \sim N(0,1)$ is a standard Gaussian random variable. 
+This is a simple consequence of the property of the Gaussian distribution
+under scale-location transformations. 
+
+```{r}
+y <- a*x + b + sigma2 * rnorm(n)
+### equivalently 
+## y <- a*x + b + rnorm(n, sd = sigma2)
+### or also
+## y <- a*x + rnorm(n, mean = b, sd = sigma2)
+### or even the more expensive, but probably more intuitive
+## y <- sapply(x, function(xx){
+## return(rnorm(1, mean = a*x + b, sd = sigma2))  
+## })
+```
+
+we can now plot the observations in a scatter plot:
+
+```{r}
+plot(x,y)
+```
+
+The true regression function is the function
+
+\[  r(x) = \mathbb{E}(Y|X=x) = \mathbb{E}( N(ax + b , \sigma_2^2) ) 
+= ax +b   \]
+
+We can use the `abline` function to plot it, be careful that we
+called the intercept with $b$ and the slope with $a$
+
+```{r}
+plot(x,y)
+abline(a = b, b = a, col = "red")
+```
+
+#### 1.2 
+
+We fit now a linear regression model.
+
+```{r}
+fit <- lm(formula = y ~ x, data = data.frame(x = x, y = y))
+```
+
+And we plot the fitted regression line on top of the scatter plot and 
+alongside the true regression line.
+
+```{r}
+plot(x,y)
+abline(a = b, b =a, col = "red")
+abline(fit, col = "blue")
+```
+
+#### 1.3
+
+We use the `summary` function to obtain information on the fitted
+coefficients. 
+
+```{r}
+summary(fit)
+```
+
+
+#### 1.4 
+
+We repeat the data generation but now with a true intercept $b = 2$, 
+since then we are asked to repeat the experiment with different 
+parameter we will just write a function to generate data: 
+
+```{r}
+generate_linear <- function(n = 50, a = 1, b = 2, sigma1 = 1, 
+                              sigma2 = 1){
+  #### first we generate data
+  x <- rnorm(n, mean = 0, sd = sigma1)
+  y <- a*x + b + rnorm(n, mean = 0, sd = sigma2)
+  return(list(data = data.frame(x = x, y = y), a = a , b = b))
+                              }
+```
+
+A function to fit the model and do the plotting 
+
+```{r}
+### this function works with a list of the type returned 
+### by the generate_linear function
+fit_and_plot <- function(object, formula = y ~ x, verbose = TRUE){
+  fit <- lm(formula = formula, data = object$data)
+  if (verbose){
+    plot(object$data)
+    abline(a = object$b, b = object$a, col = "red")
+    abline(fit, col = "blue")
+    legend("right", legend = c("true reg.", "fitted reg."), 
+           col = c("red", "blue"), lty = 1)
+    print(summary(fit)) ##we print the summary of fit
+  }
+  object$fit <- fit ## here we just append the fitted model to the list
+  invisible(object) ## this return a temporary invisible copy, so we
+                    ## do not have too many object printed in the 
+                    ## console, but we can still save them 
+}
+```
+
+We test the two functions, by default the intercept is $b = 2$ as 
+requested by the exercise 
+
+```{r}
+set.seed(2)
+fit_and_plot(generate_linear())
+```
+
+We can see that with the default choices $\sigma_1 = \sigma_2 = 1$, sample size $n = 50$ and $a = 1$, $b = 2$ we obtain a 
+very strong evidence against the null hypothesis that the 
+intercept is 0. 
+
+We try now to increase the *intrinsic noise* of $Y|X=x$, that is 
+$\sigma_2$, (we can appreciate now the power of having defined 
+functions) 
+
+```{r}
+set.seed(1)
+fit_and_plot(generate_linear(sigma2 = 5))
+```
+
+
+We can see that the p-value is reduced. 
+
+Lets increase $\sigma_2$ even more
+
+```{r}
+set.seed(2) ### for reproducibility
+fit_and_plot(generate_linear(sigma2 = 10))
+```
+
+With this choice of $\sigma_2$ we thus no longer reject the null 
+hypothesis. Observe that **we know** in this case that the true 
+intercept is not 0, the problem is that the intrinsic noise 
+on the response variable $Y$ makes impossible to draw conclusions. 
+We recall from the hypothesis testing theory that in this case 
+we just can not state anything on the intercept, we can not say 
+that the true intercept is 0!
+
+Observe also that residual standard error is the estimator of
+the standard error $\sigma_2$.
+
+You can now use the defined function to increase the sample size and 
+check what happen. 
+
+#### 1.5 
+
+First of all we generate some data, we could use the previous 
+defined functions but we will do it from scratch again for clarity:
+
+```{r}
+sigma1 <- 1
+sigma2 <- 1
+a <- -1
+b <- 2
+n <- 50
+x <- rnorm(n, mean = 0, sd = sigma1)
+y <- a*x + b + rnorm(n, mean = 0, sd = sigma2) 
+```
+
+Then we fit both models 
+
+```{r}
+### without intercept 
+fit0 <- lm(formula = y ~ x - 1, data = data.frame(x = x, y = y)) 
+### and the classical one with intercept
+fit1 <- lm(formula = y ~ x, data = data.frame(x = x, y = y))
+summary(fit0)
+summary(fit1)
+```
+
+Obviously the model without intercept should be wrong in this case. 
+We compare the models with AIC and BIC.
+
+```{r}
+sapply(list(fit0 = fit0, fit1 = fit1), function(m){
+  return(list(AIC = AIC(m), BIC = BIC(m)))
+})
+```
+
+We can see that for both AIC and BIC the lower values are obtained
+by the `fit1` model, that is the model with intercept.
+
+To perform the F-test we use the `anova` function.
+
+```{r}
+anova(fit0, fit1)
+```
+
+The p-value is very small and thus we have a very strong evidence 
+against the null hypothesis that the model `fit0` (without 
+intercept) is sufficient to describe the data. We remind that the 
+F-test is just an exact version of the likelihood-ratio test 
+and can be applied to nested models. 
+
+We can also repeat the experiment with a true intercept set to 0. We
+also increase the sample size to 300.
+
+```{r}
+n <- 300
+b <- 0
+x <- rnorm(n, mean = 0, sd = sigma1)
+y <- a*x + b + rnorm(n, mean = 0, sd = sigma2) 
+fit0 <- lm(formula = y ~ x - 1, data = data.frame(x = x, y = y)) 
+fit1 <- lm(formula = y ~ x, data = data.frame(x = x, y = y))
+sapply(list(fit0 = fit0, fit1 = fit1), function(m){
+  return(list(AIC = AIC(m), BIC = BIC(m)))
+})
+anova(fit0, fit1)
+```
+
+In this case we can see that the simpler model starts to be preferred,
+especially from the F-test p-value.
+
+### Ex 2 
+
+Here we look at polynomial models and regression. We will not go as
+much as in detail as in the previous exercise, and we will mainly 
+just write the needed code.
+
+#### 2.1 
+
+```{r}
+n <- 50
+x <- rnorm(n)
+r <- function(x){
+  x^2 - x + 1
+}
+y <- r(x) + rnorm(n, sd = sqrt(2))
+plot(x,y)
+curve(r(x), add = T, col = "red")
+```
+
+#### 2.2 
+
+```{r}
+fit1 <- lm(y ~ x, data = data.frame(x = x, y = y))
+plot(x,y)
+curve(r(x), add = T, col = "red")
+abline(fit1, col = "blue")
+```
+
+#### 2.3
+
+```{r}
+plot(x, fit1$residuals, ylab = "residuals", 
+     main = "predictor vs residuals")
+```
+
+The predictor vs residuals plot shows a clear trend, in particular the 
+residuals do not seem independent from the predictor and not distributed
+around 0. 
+
+```{r}
+qqnorm(residuals(fit1))
+qqline(residuals(fit1))
+```
+
+The Q-Q plot maybe is less conclusive but we can observe that the 
+empirical quantiles of the residuals do not fit well the normal 
+distribution.
+
+#### 2.4 
+
+We fit now the true model, that is a polynomial of degree 2. 
+
+```{r}
+fit2 <- lm(y ~ I(x^2) + x, data = data.frame(x = x, y = y))
+plot(x,y, xlim = range(x) + c(-3, 0))
+curve(r(x), add = T, col = "red")
+abline(fit1, col = "blue")
+xx <- seq(from = min(x) - 1, to = max(x) + 1, length.out = 100)
+yy <- predict(fit2, newdata = data.frame(x = xx))
+lines(xx, yy, type = "l", col = "orange")
+legend("bottomleft", legend = c("true reg.", "linear reg.", 
+                                "quadratic reg."), 
+       col = c("red", "blue", "orange"), lty = 1)
+```
+
+#### 2.5 
+
+```{r}
+plot(x, residuals(fit2))
+
+qqnorm(residuals(fit2))
+qqline(residuals(fit2))
+```
+
+Especially from the predictor vs residual plot we can observe that the
+residuals behaves as independent from the feature as we expect. 
+
+#### 2.6 
+
+AIC, BIC:
+
+
+```{r}
+sapply(list(fit1 = fit1, fit2 = fit2), function(m){
+  return(list(AIC = AIC(m), BIC = BIC(m)))
+})
+```
+
+And F-test:
+
+```{r}
+anova(fit1, fit2)
+```
+
+AIC/BIC and F-test both select the more complex model `fit2` 
+(quadratic). 
+
+#### 2.7 
+
+```{r}
+scores <- sapply(1:10, function(deg){
+  fit <- lm(y ~ poly(x, degree = deg), data = 
+              data.frame(x = x, y = y))
+  return(c(AIC = AIC(fit), BIC= BIC(fit), LL = logLik(fit)))
+})
+colnames(scores) <- 1:10
+plot(scores[1,], type = "l", xlab = "degree", ylab = "AIC" )
+plot(scores[2,], type = "l", xlab = "degree", ylab = "BIC" )
+plot(scores[3,], type = "l", xlab = "degree", ylab = "LL" )
+```
+
+We can see that the log likelihood is an increasing function of the 
+degree of the polynomial (or in general of the number of parameters). 
+That is, the more parameters we have in the model, the better it will 
+fit a given data set. That is why we can not use the pure likelihood 
+for model selection because we will always choose the more complex model. 
+AIC and BIC are two ways of penalizing the complexity of the model, so 
+that we choose the more complex model only if it obtain a **significant** 
+increase in the log-likelihood. 
+
+### Ex 3
+
+#### 3.1 
+
+```{r}
+n <- 50
+x <- rnorm(n, sd = 1/2)
+r <- function(x){
+  exp(-3*x) + 2*x 
+}
+y <- r(x) + rnorm(n, sd = sqrt(2))
+plot(x,y)
+```
+
+#### 3.2 
+
+```{r}
+candidates <- lapply(1:5, function(d){
+  lm(y ~ poly(x, degree = d), data = data.frame(x = x, y = y))
+})
+```
+
+We can also plot all the fitted regression functions 
+
+```{r}
+plot(x,y)
+xx <- seq(from = min(x) -1, to = max(x) + 1, length.out = 100)
+newdata <- data.frame(x = xx)
+invisible(lapply(candidates, function(m){
+  k <- length(m$coefficients)
+  lines(xx, predict(m, newdata = newdata), col = k)  
+  }))
+legend("topright", legend = paste("degree = ", 1:5), 
+       col = 2:6, lty = 1)
+```
+
+#### 3.3 
+
+```{r}
+sapply(candidates, function(m){
+  return(list(AIC = AIC(m), BIC = BIC(m)))
+})
+```
+
+Using AIC we select the 5 degree polynomial model and with BIC 
+the 4 degree polynomial. 
+
+#### 3.4 
+
+We plot residuals for the 2 degree polynomial.
+
+```{r}
+res <- residuals(candidates[[2]])
+plot(x, res, main = "Residuals degree 2")
+
+qqnorm(res)
+qqline(res)
+```
+
+
+We plot residuals for the 4 degree polynomial.
+
+```{r}
+res <- residuals(candidates[[4]])
+plot(x, res, main = "Residuals degree 4")
+
+qqnorm(res)
+qqline(res)
+```
+
+From the residuals scatter plot and the normal Q-Q plot it is difficult to
+tell if the model are correct in this case. We know that the true 
+regression function is not polynomial. 
+
+We can plot the behavior of the regression functions outside the range of the data. 
+
+```{r}
+plot(x,y, xlim = range(x) + c(-5, 5))
+xx <- seq(from = min(x) - 10 , to = max(x) + 10, length.out = 300)
+newdata <- data.frame(x = xx)
+invisible(lapply(candidates, function(m){
+  k <- length(m$coefficients)
+  lines(xx, predict(m, newdata = newdata), col = k)  
+}))
+legend("topright", legend = paste("degree = ", 1:5), 
+       col = 2:6, lty = 1)
+```
+
+We can observe that depending on the degree of the polynomial used the 
+models behave very differently, especially outside of the range of the
+data. 
+
+
+#### 3.5 
+
+We now fit the real model 
+
+```{r}
+regr <- function(x, b){
+  b[1] + b[2]*x + exp(b[3] * x)
+}
+
+rss <- function(b){
+  sum( (y - regr(x, b))^2 )  
+}
+
+
+result <- optim(par = c(0, -1, -1), fn = rss)
+result
+```
+
+We can now plot the obtained regression function
+
+```{r}
+plot(x,y)
+curve(regr(x, result$par), add = TRUE, col = "red")
+```
+
+The built-in method for non-linear least squares obtains 
+the same values for the parameters:
+
+```{r}
+fitnls <- nls(formula = y ~ b0 + b1*x + exp(b2*x), start = list(b0 = 0, b1 = 0, b2 = -5),
+              data = data.frame(x = x, y = y))
+summary(fitnls)
+```
+
+
+The algorithms are very sensitive to the starting points, especially if we start from a 
+positive value for the `b2` parameter. 
+
+We can now check the residuals of the model. 
+
+```{r}
+qqnorm(residuals(fitnls))
+qqline(residuals(fitnls))
+```
+
+We can also fit the model maximizing the 
+log-likelihood  (or minimizing 
+the minus log-likelihood)
+
+```{r}
+
+mll <- function(pars){
+  - sum( sapply(1:n, function(i){
+    return(dnorm(y[i], 
+                 mean = regr(x[i], 
+                             pars[1:3]),
+                 sd = pars[4], log = T))
+  }))
+}
+
+optim(mll, par = c(0,0,-5,1))
+```
+
+The last parameter is the estimated 
+value of the noise standard deviation. 
+
+## The wine quality dataset
+
+We load the data with 
+
+```{r}
+wines <- read.csv("winequality-red.csv", sep =";")
+```
+
+### Ex 4
+
+
+#### 4.1
+
+```{r}
+fitall <- lm(quality ~ ., data = wines)
+summary(fitall)
+```
+
+From the p-values of the t-tests we can observe that probably the
+most significant regressors are `volatile.acidity`, `chlorides`,
+`total.sulfur.dioxide`, `sulphates`, `alcohol`, `ph` and 
+`free.sulfur.dioxide`. 
+
+#### 4.2
+
+We implement now the forward stepwise selection (with AIC),
+
+```{r}
+fit <- lm(quality ~ 1, data = wines) ## only the intercept
+regressors <- colnames(wines)[-12]
+selected <- c()
+score <- AIC(fit)
+score.best <- score
+done <- FALSE
+while (!done){
+   for (reg in regressors[!(regressors %in% selected)]){
+     tmp <- update(fit, formula = paste(". ~ . + ", reg))
+     score.tmp <- AIC(tmp)
+     if (score.tmp < score.best){
+       score.best <- score.tmp
+       best <- tmp
+       selected.best <- c(selected, reg)
+     }
+   }  
+   if (score.best < score){
+     fit <- best
+     score <- score.best
+     selected <- selected.best
+   }else{ ### if there is no increase 
+     done <- TRUE
+   }
+}
+#### when the while loop ends we will have the selected model in 
+#### fit
+
+fit
+```
+
+
+Using the built-in function `step` we obtain the same result,
+```{r}
+fit <- lm(quality ~ 1, data = wines) ## only the intercept
+biggest <- lm(quality ~ ., data = wines)
+fit_step <- step(object = fit, scope = formula(biggest), direction = "forward",
+                 trace = 0)
+fit_step
+```
+
+#### 4.3
+
+We now implement the method of Zheng-Loh for model selection. 
+
+First of all we fit the full model and we obtain the 
+Wald statistics. Then we sort the absolute values of the Wald 
+statistics. 
+
+```{r}
+st.errors <- summary(fitall)$coefficients[-1,2]
+W <- fitall$coefficients[-1] / st.errors
+ix <- sort(abs(W), decreasing = TRUE, index.return = TRUE)$ix
+reg.names <- names(fitall$coefficients[-1])[ix] ### sorted 
+sigma2_est <- sum(fitall$residuals^2) / nrow(wines) 
+```
+
+
+Now we select the model that minimize $RSS(j) + j\hat{\sigma}^2 \log(n)$.
+
+```{r}
+s <- Inf
+for (j in 1:length(reg.names)){
+  fit.tmp <- lm(paste("quality ~", 
+                      paste(reg.names[1 : j], collapse = "+") ),
+                data = wines)
+  s.tmp <- sum(fit.tmp$residuals^2) + j * (sigma2_est) * 
+      log(nrow(wines))
+  if (s.tmp < s ){
+        J <- j 
+        s <- s.tmp
+      }
+}
+
+fit.final <- lm(paste("quality ~", 
+                      paste(reg.names[1 : J], collapse = "+") ),
+                data = wines)
+summary(fit.final)
+```
+
+### Ex 5 
+
+We transform the quality variable to a binary variable
+indicating if a wine is good or bad.
+
+```{r}
+good <- wines$quality > 5
+wines$quality <- "bad"
+wines[good, "quality"] <- "good"
+wines[,"quality"] <- as.factor(wines[, "quality"])
+```
+
+#### 5.1 
+
+We fit now a logistic regression model using all 
+predictors.
+
+```{r}
+fitA <- glm(quality ~ . , family = "binomial", 
+            data = wines )
+summary(fitA)
+```
+
+#### 5.2 
+
+We implement a forward feature selection based on AIC. 
+
+```{r}
+fit <- glm(quality ~ 1, family = "binomial",
+           data = wines) ## only the intercept
+regressors <- colnames(wines)[-12]
+selected <- c()
+score <- AIC(fit)
+score.best <- score
+done <- FALSE
+while (!done){
+   for (reg in regressors[!(regressors %in% selected)]){
+     tmp <- update(fit, formula = paste(". ~ . + ", reg))
+     score.tmp <- AIC(tmp)
+     if (score.tmp < score.best){
+       score.best <- score.tmp
+       best <- tmp
+       selected.best <- c(selected, reg)
+     }
+   }  
+   if (score.best < score){
+     fit <- best
+     score <- score.best
+     selected <- selected.best
+   }else{ ### if there is no increase 
+     done <- TRUE
+   }
+}
+#### when the while loop ends we will have the selected model in 
+#### fit
+
+fit
+```
+
+Using log-likelihood
+
+```{r}
+fit_ll <- glm(quality ~ 1, family = "binomial",
+           data = wines) ## only the intercept
+regressors <- colnames(wines)[-12]
+selected <- c()
+score <- -logLik(fit_ll)
+score.best <- score
+done <- FALSE
+while (!done){
+   for (reg in regressors[!(regressors %in% selected)]){
+     tmp <- update(fit, formula = paste(". ~ . + ", reg))
+     score.tmp <- -logLik(tmp)
+     if (score.tmp < score.best){
+       score.best <- score.tmp
+       best <- tmp
+       selected.best <- c(selected, reg)
+     }
+   }  
+   if (score.best < score){
+     fit_ll <- best
+     score <- score.best
+     selected <- selected.best
+   }else{ ### if there is no increase 
+     done <- TRUE
+   }
+}
+#### when the while loop ends we will have the selected model in 
+#### fit
+
+fit_ll
+```
+
+#### 5.3 
+
+Using log-likelihood to select the model 
+we will always select the more complex 
+model, since more complex 
+models will always fit better the data than
+simpler ones. 
+
+That is why we need to penalize complexity 
+as in AIC or BIC.
+
+#### 5.4 
+
+```{r}
+preds <- predict(fit)
+linkinv <- binomial()$linkinv
+
+## From the doc of binomial() :
+## As a factor: ‘success’ is interpreted
+## as the factor not having the first 
+##level (and hence usually of having the
+##second level).
+linkinv(preds)[1] ##prob of success 
+```
+
+
+```{r}
+toClass <- function(predictions, 
+                    levels, 
+                    linkinv =
+                    binomial()$linkinv){
+  
+  ## threshold the prob of success
+  a <- linkinv(predictions) > 0.5
+  b <- array(dim =
+               c(length(predictions)))
+  ## if prob succ > 0.5 => success
+  ##                       (second lvl)
+  b[a] <- levels[2]
+  
+  ## otherwise not success (first lvl)
+  b[!a] <- levels[1]
+
+  ## we should return a factor
+  return(factor(b, levels = levels))
+}
+preds.class <- toClass(preds, 
+                 levels(wines$quality))
+```
+
+#### 5.5 
+
+```{r}
+## the function table builds contingency
+## tables for the given factor variables
+## be careful that they should have the 
+## same levels
+tt <- table(preds.class, wines$quality)
+tt
+accuracy <- sum(diag(tt)) / sum(tt)
+accuracy
+```
+
+
+## CORIS data
+
+We load the data 
+
+```{r}
+coris <- read.table("coris.dat", skip = 4, sep = ",",
+col.names = c("row.names", "sbp", "tobacco",
+"ldl", "adiposity",
+"famhist", "typea", "obesity",
+"alcohol",
+"age", "chd"))[,-1]
+```
+
+### Ex 6
+
+#### 6.1
+
+We use backward stepwise selection 
+
+```{r}
+res <- step(glm(chd ~ ., data = coris, family = "binomial"), direction = 
+              "backward", trace = 0)
+summary(res)
+```
+
+
+#### 6.2
+
+The complete model for logistic regression is 
+
+```{r}
+logreg_all <- glm(chd ~ ., data = coris, family = "binomial")
+summary(logreg_all)
+```
+
+We can see that the p-values for the coefficient of obesity and alcohol 
+are not small, thus those variables seems to be less important
+in predicting coronary hear disease. 

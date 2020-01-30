@@ -1,0 +1,427 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## CORIS data
+
+```{r}
+coris <- read.table("coris.dat", skip = 4, sep = ",",
+col.names = c("row.names", "sbp", "tobacco",
+"ldl", "adiposity",
+"famhist", "typea", "obesity",
+"alcohol",
+"age", "chd"))[,-1]
+```
+
+### Ex 1
+
+#### 1.1 
+
+Fit the full logistic regression model 
+
+```{r}
+coris$chd <- as.factor(coris$chd)
+fitAll <- glm(chd ~ ., data = coris, family = "binomial")
+```
+
+We estimate accuracy of the model using leave-one -out cross validation, first of
+all we copy from week 5 solutions the function to transfrom the prediction output
+to the class values.
+
+```{r}
+toClass <- function(predictions, 
+                    levels, 
+                    linkinv =
+                    binomial()$linkinv){
+  
+  ## threshold the prob of success
+  a <- linkinv(predictions) > 0.5
+  b <- array(dim =
+               c(length(predictions)))
+  ## if prob succ > 0.5 => success
+  ##                       (second lvl)
+  b[a] <- levels[2]
+  
+  ## otherwise not success (first lvl)
+  b[!a] <- levels[1]
+
+  ## we should return a factor
+  return(factor(b, levels = levels))
+}
+tt <- table(toClass(predict(fitAll), levels(coris$chd)), coris$chd)
+acc_train <- sum(diag(tt)) / sum(tt) 
+acc_train ### accuracy over the training set
+```
+
+Now we can perform cross validation using leave-one-out
+```{r}
+n <- nrow(coris)
+res_loo <- sapply(1:n, function(i){
+  fit <- glm(chd ~ ., data = coris[-i, ], family = "binomial")
+  pr <- predict(fit, newdata = coris[i,])
+  pred.class <- toClass(pr, levels = levels(coris$chd))
+  return(pred.class == coris$chd[i]) 
+})
+acc_loo <- sum(res_loo) / length(res_loo)
+acc_loo
+```
+
+And using 10-fold, first of all we need to create the groups, the easier way 
+is to shuffle the index of the observations (rows of `coris`) and then 
+create 10 consecutive groups. Moreover since `n = 462` we will create 8 groups 
+of 46 elements and 2 of 47.  
+
+```{r}
+k <- 10
+r <- floor(n / k)
+groups <- list()
+t <- 0
+s <- 0
+for (i in 1:10){
+  if (i > 8){
+    t <- 1
+    if (i > 9){
+      s <- 1
+    }
+  }
+  groups[[i]] <- ((i - 1) * r + 1 + s) : (i * r + t + s) 
+}
+corisSHF <- coris[sample(1:n), ]
+```
+
+Now we can perform the validation:
+```{r}
+res_10 <- sapply(1:10, function(i){
+  fit <- glm(chd ~ ., data = corisSHF[-groups[[i]], ], family = "binomial")
+  pr <- predict(fit, newdata = corisSHF[groups[[i]],])
+  pred.class <- toClass(pr, levels = levels(coris$chd))
+  tt <- table(pred.class, corisSHF$chd[ groups[[i]] ] )
+  acc <- sum(diag(tt)) / sum(tt) 
+  return(acc) 
+})
+acc_10 <- mean(res_10)
+acc_10
+```
+
+We use backward stepwise selection
+
+```{r}
+fitst <- step(fitAll, direction = "backward", trace = 0)
+```
+
+
+And we evaluate the model with both leve-one-out and 10-fold cross validation,
+
+```{r}
+res_loo_st <- sapply(1:n, function(i){
+  fit <- glm(formula(fitst), data = coris[-i, ], family = "binomial")
+  pr <- predict(fit, newdata = coris[i,])
+  pred.class <- toClass(pr, levels = levels(coris$chd))
+  return(pred.class == coris$chd[i]) 
+})
+acc_loo_st <- sum(res_loo_st) / length(res_loo_st)
+acc_loo_st
+```
+
+```{r}
+res_10_st <- sapply(1:10, function(i){
+  fit <- glm(formula(fitst), data = corisSHF[-groups[[i]], ], family = "binomial")
+  pr <- predict(fit, newdata = corisSHF[groups[[i]],])
+  pred.class <- toClass(pr, levels = levels(coris$chd))
+  tt <- table(pred.class, corisSHF$chd[ groups[[i]] ] )
+  acc <- sum(diag(tt)) / sum(tt) 
+  return(acc) 
+})
+acc_10_st <- mean(res_10_st)
+acc_10_st
+```
+
+We put everything in a matrix to compre it
+```{r}
+matrix(c(acc_loo, acc_10, acc_loo_st, acc_10_st), nrow = 2, byrow = TRUE,
+       dimnames = list(model = c("full", "step"), accuracy = c("loo", "10-fold")))
+```
+
+We can observe that the simpler model obtained with backward stepwise
+selection based on AIC, generalize better, that is 
+has a better accuracy over unseen observations. 
+
+#### 1.2 
+
+First of all we create a function to cross validate a model. By default it
+performs leave-one-out.
+
+```{r}
+crossval <- function(object, data = object$data, 
+                     groups = as.list(1:nrow(data)), 
+                     shuffle = TRUE){
+  if (shuffle){
+    data <- data[sample(1:nrow(data)), ]
+  }
+  class <- as.character(object$formula[[2]])
+  res <- sapply(groups, function(ix){
+    fit <- glm(formula(object), data = data[-ix, ], family = object$family)
+    pr <- predict(fit, newdata = data[ix,])
+     pred.class <- toClass(pr, levels = levels(data[[class]]), 
+                        linkinv = object$family$linkinv)
+    tt <- table(pred.class, data[[ class ]][ ix ] )
+    acc <- sum(diag(tt)) / sum(tt) 
+    return(acc) 
+  })
+  return(mean(res))
+}
+```
+
+We test the function,
+```{r}
+crossval(fitAll)
+```
+
+```{r}
+crossval(fitAll, data = corisSHF, groups = groups, shuffle = FALSE)
+```
+It seems that it works fine. 
+
+Now we copy and modify the stepwise algorithm from the solutions of week 5,
+
+```{r}
+#### we create the 5 groups for validation
+k <- 5
+r <- floor(n / k)
+groups <- list()
+t <- 0
+s <- 0
+for (i in 1:5){
+  if (i > 3){
+    t <- 1
+    if (i > 4){
+      s <- 1
+    }
+  }
+  groups[[i]] <- ((i - 1) * r + 1 + s) : (i * r + t + s) 
+}
+
+### we start the model with only the intercept
+fit <- glm(chd ~ 1, family = "binomial",
+           data = coris) ## only the intercept
+regressors <- colnames(coris)[-10]
+selected <- c()
+score <- crossval(object = fit, groups = groups, shuffle = FALSE)
+score.best <- score
+done <- FALSE
+while (!done){
+   for (reg in regressors[!(regressors %in% selected)]){
+     tmp <- update(fit, formula = paste(". ~ . + ", reg))
+     score.tmp <- crossval(tmp, groups = groups, shuffle = FALSE)
+     if (score.tmp > score.best){
+       score.best <- score.tmp
+       best <- tmp
+       selected.best <- c(selected, reg)
+     }
+   }  
+   if (score.best > score){
+     fit <- best
+     score <- score.best
+     selected <- selected.best
+   }else{ ### if there is no increase 
+     done <- TRUE
+   }
+}
+#### when the while loop ends we will have the selected model in 
+#### fit
+
+fit
+```
+
+The 5-fold cross validation accuracy (using the same groups) of the model is
+
+```{r}
+crossval(fit, groups = groups, shuffle = FALSE)
+```
+
+And for the other models we have 
+
+```{r}
+crossval(fitst, groups = groups, shuffle = FALSE)
+```
+
+and
+
+```{r}
+crossval(fitAll, groups = groups, shuffle = FALSE)
+```
+
+## Wines quality 
+
+### Ex 2
+
+```{r}
+wines_red <- read.csv("winequality-red.csv", sep =";")
+wines_white <- read.csv("winequality-white.csv", sep =";")
+good <- wines_red$quality > 5
+wines_red$quality <- "bad"
+wines_red[good, "quality"] <- "good"
+wines_red[,"quality"] <- as.factor(wines_red[, "quality"])
+good <- wines_white$quality > 5
+wines_white$quality <- "bad"
+wines_white[good, "quality"] <- "good"
+wines_white[,"quality"] <- as.factor(wines_white[, "quality"])
+```
+
+#### 2.1
+
+Fit a logistic regression model sing all the predictors and data for red 
+wines. 
+
+```{r}
+model_red <- glm(quality ~ ., family = "binomial", data = wines_red)
+summary(model_red)
+```
+
+We compute the accuracy over the red wines data:
+
+```{r}
+## we can use again the toClass function we defined before
+predicted_quality <- toClass(predictions = predict(model_red), levels = levels(wines_red$quality))
+acc_red <- sum(diag(table(predicted_quality, wines_red$quality))) / nrow(wines_red)
+acc_red
+
+
+### or we can do it without using the toClass variable
+pred <- predict(model_red)
+
+predicted_quality <- rep(NA, length(pred))
+predicted_quality[pred >= 0] <- "good"
+predicted_quality[pred < 0] <- "bad"
+acc_red <- sum(diag(table(predicted_quality, wines_red$quality))) / nrow(wines_red)
+acc_red
+
+### you can see that the two methods return the same accuracy 
+```
+
+The accuracy for the model over the white wines:
+
+```{r}
+### we just replace wines_red with wines_white
+pred <- predict(model_red, newdata = wines_white)
+predicted_quality <- rep(NA, length(pred))
+predicted_quality[pred >= 0] <- "good"
+predicted_quality[pred < 0] <- "bad"
+acc_white <- sum(diag(table(predicted_quality, wines_white$quality))) / nrow(wines_white)
+acc_white
+
+```
+
+As expected the accuracy over the white wines is lower, we used a model
+trained over red wines to predict the quality of white wines. 
+
+#### 2.2 
+
+Is similar to ex 2.1 but with inverted roles of red and whites wines. 
+
+```{r}
+model_white <- glm(quality ~ ., family = "binomial", data = wines_white)
+summary(model_white)
+
+#
+#
+# .....
+```
+
+
+#### 2.3 
+
+```{r}
+summary(model_red)
+
+summary(model_white)
+```
+
+
+The model fitted over the two dataset show some differences:
+
+* The p-value for the intercept in the model for red wines shows that 
+  we can not reject the hypothesis that the simpler model without intercept 
+  is sufficient, while for white wines we have enough data to show that the
+  intercept should be included in the model. 
+* the residual sugar variable seems to be important for predicting quality of white wines but not for red wines. 
+* the total sulfur dioxid is significant in the model for white wines, while 
+it can be probably omitted in the red wines model. 
+* ....
+
+### Ex 3 
+
+
+#### 3.1 
+
+We want to perform stepwise forward selection using all the data available.
+
+```{r}
+## the function rbind will join two dataframe with the same columns 
+## into a single dataframe
+wines_all <- rbind(wines_red, wines_white)
+dim(wines_all) ### you can check that the dimensions are correct
+
+
+model_0 <- glm(quality ~ 1, data = wines_all, family = "binomial")
+model_all <- glm(quality ~ ., data = wines_all, family = "binomial")
+model_step <- step(model_0, scope = as.formula(model_all), 
+                       direction = "forward", trace = 0)
+summary(model_step)
+```
+
+
+#### 3.2 
+
+```{r}
+k <- 10
+n <- nrow(wines_all)
+m <- n %/% k
+groups <- lapply(1:k, function(j){
+  return( (m* (j-1) + 1): (m * j) )
+})
+crossval(model_step,data =  wines_all, groups = groups, shuffle = TRUE)
+```
+
+#### 3.3 
+
+We want to test the model `model_step` over the red wines
+
+First of all we see how we can select 200 randomly red wines and 
+then train the model on the remaining red and all the white wines, and finally
+test the model over the 200 selected red wines.
+
+```{r}
+
+### randomly select 200 red wines
+red_test <- sample(nrow(wines_red), size = 200, replace = FALSE) 
+
+### train the model
+model_trained <- glm(as.formula(model_step), family = "binomial", 
+                     data = rbind(wines_red[-red_test,], wines_white))
+
+pred_qual <- toClass(predict(model_trained, newdata = wines_red[red_test,]), 
+                  levels(wines_red$quality))
+## compute the accuracy
+sum(diag(table(pred_qual, wines_red$quality[red_test]))) / 200
+```
+
+now we repeat the process a certain number of times and we average the results:
+
+```{r}
+accs <- replicate(100, {
+  ### randomly select 200 red wines
+red_test <- sample(nrow(wines_red), size = 200, replace = FALSE) 
+
+### train the model
+model_trained <- glm(as.formula(model_step), family = "binomial", 
+                     data = rbind(wines_red[-red_test,], wines_white))
+
+pred_qual <- toClass(predict(model_trained, newdata = wines_red[red_test,]), 
+                  levels(wines_red$quality))
+## compute the accuracy
+sum(diag(table(pred_qual, wines_red$quality[red_test]))) / 200
+})
+
+mean(accs)
+```

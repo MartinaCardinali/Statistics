@@ -1,0 +1,648 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Ex 1 Blood types 
+
+In classical genetics, we recognize three alleles for the ABO gene that 
+regulates
+ABO blood type: $i$, $I^A$ and $I^B$ . Any individual inherits a complete
+set of chromosomes from its two parents and thus the genotype of an 
+individual is a pair of alleles (the order is not important).
+
+### 1.1  Sample space
+
+**Describe the sample space related to the genotype of an 
+individual**
+
+\[ \Omega = \{ \{ i, i \}, \{ i, I^A \} , \{ i, I^B \} , \{ I^A, I^B \} , 
+\{ I^A, I^A \}, \{ I^B, I^B \} \} \]
+
+\[ |\Omega| = 6 =  2 \times 3   \tag{not requested}\]
+
+
+### 1.2 Probability for the offspring
+
+**Suppose both parents have genotype $iI^A = \{ i, I^A \}$, compute the
+probability that the offspring will have genotype $ii = \{ i,i \}$ and the
+probability that at least one of the two alleles will be $i$**
+
+We can represent the situation with a table, that we can generate in R as
+```{r}
+parent1 <- c("i", "i^A")
+parent2 <- c("i", "i^A")
+offspring <- apply(expand.grid(parent1, parent2), MARGIN = 1, 
+                   FUN = function(x){ return(paste(x[1], x[2]))})
+matrix(data = offspring , nrow = 2, 
+       dimnames = list(parent1 = parent1, parent2 = parent2))
+
+```
+
+The possible genotypes for the offspring are,
+\[ ii, iI^A, I^AI^A   \]
+
+The probabilities of each *cell* in the table is $0.25$ thus, the 
+probabilities for the possible genotypes are,
+\[ P(ii) = 0.25 \quad P(I^AI^A) = 0.25 \quad P(iI^A) = 0.25 + 0.25 = 0.5 \]
+Or similarly we can use the independence assumption to say that 
+\[ P(ii) = P(\text{parent 1 gives } i \text{ and parent2  gives } i) = \]
+
+  \[P(\{ \text{parent 1 gives } i \} \cap \{ \text{ parent2  gives } i \}) = \]
+  
+  \[P(\{ \text{parent 1 gives } i \} ) \times  P( \{ \text{ parent2  gives } i \}) = 0.5 \times 0.5   \]
+  And so on for the other probabilities. 
+
+
+As you can see $P(ii) + P(iI^A) + P(I^AI^A) = 1$. 
+
+Now we can easily compute the required probabilities,
+
+\[ P(ii)= 0.25 \]
+
+and 
+
+\[ P( \text{at least one alleles is } i ) = P( \{ ii \} \text{ or } \{ iI^A\}) = P( \{ii\} \cup \{ iI^A \}) \] 
+\[= P(ii) + P(iI^A) = 0.75 \]
+
+Since the two events $\{ ii\}$ and $\{ iI^A \}$ are disjoint. 
+
+### 1.3 Two generations 
+
+- **Parents with genotypes $iI^A$ and $iI^B$ generate offspring $A$**
+- **Parents with genotypes $I^AI^B$ generate offspring $B$**
+- **Parents $A$ and $B$ generate individual $C$** 
+
+**Compute the probability of genotype of $C$ being $I^AI^B$**
+
+\[ P(\text{genotype of } C = I^A I^B) = \] 
+\[ P(A \rightarrow C = I^A \text{ and } B \rightarrow C = I^B ) + 
+P(A \rightarrow C = I^B \text{ and } B \rightarrow C = I^A) \]
+where we use the notation $K \rightarrow M = zzz$ to denote the events 
+where parent $K$ gives allele $zzz$ to offspring $M$. 
+
+We proceed now to obtain the probabilities 
+\[P(A \rightarrow C = I^A \text{ and } B \rightarrow C = I^B ) 
+\tag{first case} \]
+\[P(A \rightarrow C = I^B \text{ and } B \rightarrow C = I^A) 
+\tag{second case}\]
+
+
+Since the events of two different parents are independent, we have 
+that 
+\[ P(A \rightarrow C = I^A \text{ and } B \rightarrow C = I^B ) = 
+P(A \rightarrow C = I^A) \times P(B \rightarrow C = I^B) \tag{first
+case}\]
+
+To obtain for example $P(A \rightarrow C = I^A)$ we need to 
+consider the possible genotypes for $A$,  
+
+Individual $A$ can have one of the four possible genotypes,
+\[ ii , iI^A, iI^B, I^AI^B \] 
+And 
+\[ P(A=ii) = P(A=iI^A) = P(A=iI^B) = P(A = I^AI^B) = 0.25 \]
+
+Moreover we have that,
+\[ P(A \rightarrow C = I^A | A = ii) = 0 \]
+\[ P(A \rightarrow C = I^A | A = iI^A) = 0.5 \]
+\[ P(A \rightarrow C = I^A | A = iI^B) = 0 \]
+\[ P(A \rightarrow C = I^A | A = I^AI^B) = 0.5 \]
+
+Thus using the chain rule ($P(A,B) = P(A | B )P(B)$) we obtain,
+
+\[ P(A \rightarrow C = I^A) = (0 \times 0.25 + 0.5 \times 0.25 + 
+  0 \times 0.25 + 0.5 \times 0.25 = 0.25\]
+
+
+For individual $B$ we have that,
+\[ P(B = I^AI^A ) = P(I^BI^B) = 0.25 \]
+and
+\[ P(B = I^AI^B) = 0.5 \]
+
+and moreover,
+\[ P(B \rightarrow C = I^B | B = I^AI^A) = 0  \]
+\[ P(B \rightarrow C = I^B | B = I^AI^B) = 0.5  \]
+\[ P(B \rightarrow C = I^B | B = I^BI^B) = 1  \]
+Thus now using again the chain rule,
+
+\[ P(B \rightarrow C = I^B) = 0 \times 0.25 + 0.5 \times 0.5 
++ 1\times 0.25 = 0.5   \]
+
+We can now obtain from equation (first case) that,
+\[ P(A \rightarrow C = I^A \text{ and } B \rightarrow C = I^B ) = 
+    0.25 \times 0.5 = 0.125\]
+    
+Similarly we need to obtain,
+\[ P(A \rightarrow C = I^B \text{ and } B \rightarrow C = I^A) =
+  P(A \rightarrow C = I^B) \times P(B \rightarrow C = I^A) \tag{second case} \]
+  
+  The same reasoning will lead us to,
+  \[ P(A \rightarrow C = I^B) = 0.25   \]
+  and
+  \[  P(B \rightarrow C = I^A) = 0.5 \]
+  
+  Thus,
+  \[ P(A \rightarrow C = I^B \text{ and } B \rightarrow C = I^A) 
+  = 0.125 \]
+
+And finally
+
+\[ P(\text{genotype of } C = I^A I^B) = \] 
+\[ P(A \rightarrow C = I^A \text{ and } B \rightarrow C = I^B ) + 
+P(A \rightarrow C = I^B \text{ and } B \rightarrow C = I^A) = \]
+\[ 0.125 + 0.125 = 0.25 \]
+
+  
+### 1.4 Phenotypes 
+
+**Which are the possible phenotypes for individual $C$ ? **
+
+The possible genotypes are,
+
+\[ \{ iI^A, iI^B, I^AI^B, I^AI^A, I^BI^B  \} = \Omega \setminus 
+\{ ii \} \]
+
+Then the possible phenotypes are:
+
+ - **Type B**  from $iI^B$ or $I^BI^B$ 
+ - **Type A** from $iI^A$ or $I^AI^A$ 
+ - **type AB** from $I^AI^B$ 
+ 
+ The only phenotypes that individual $C$ can not be is **type 0**. 
+ 
+ 
+ **Can you describe the distribution of the phenotype of $C$?** 
+ 
+ We have that,
+ \[ P(\text{phenotype } C = \text{ Type AB }) = P( C = I^AI^B) =  0.25 \]
+ Moreover it is obvious that,
+ \[ P(\text{phenotype } C = \text{ Type A }) = 
+ P(\text{phenotype } C = \text{ Type B })  \]
+ since the problem is *symmetric*.
+ And since the sum of the probabilities has to be 1, we obtain that,
+ \[ P(\text{phenotype } C = \text{ Type A }) = (1 - 0.25)/2 = 0.375 \]
+ and
+  \[ P(\text{phenotype } C = \text{ Type B }) = (1 - 0.125)/2 = 0.375 \]
+  
+### 1.5 Conditional probability 
+  
+## Ex 2 Some simulations
+
+### 2.1 Random genotype
+
+**How can we simulate a random individual genotype ? ** 
+
+We use the `sample` function in R, and we represent genotypes with vectors.
+
+```{r}
+randomGenotype <- function(alleles = c("i", "A", "B")){
+  sample(alleles, size = 2, replace = T)
+}
+
+randomGenotype()
+```
+
+
+### 2.2 Random offspring and phenotype
+
+```{r}
+
+randomOffspring <- function( parent1, parent2){
+  c( sample(parent1, size = 1), sample(parent2, size = 1))
+}
+
+p1 <- randomGenotype()
+p2 <- randomGenotype()
+
+randomOffspring(p1, p2)
+```
+
+
+```{r}
+
+genotype2phenotype <- function(genotype){
+  if (all(genotype == "i")){
+   return("Type O") 
+  }else if ("i" %in% genotype){
+      return(paste("Type", genotype[genotype != "i"] ))
+  }else if (genotype[1] == genotype[2]){
+    return(paste("Type", genotype[1]))
+  }else{
+    return("Type AB")
+  }
+}
+
+```
+
+Lets test it,
+```{r}
+genotype2phenotype(c("i","i"))
+genotype2phenotype(c("A","i"))
+genotype2phenotype(c("i","B"))
+genotype2phenotype(c("A","A"))
+genotype2phenotype(c("B","B"))
+genotype2phenotype(c("A","B"))
+```
+
+Or in a more compact way,
+
+```{r}
+
+#generate all possible genotypes
+possible <- expand.grid(c("i","A","B"), c("i","A","B") )
+
+possible$phen <- apply(possible, MARGIN = 1, FUN = genotype2phenotype)
+
+possible
+```
+
+### 2.3 
+
+**Approximate from simulation the probabilities of Ex 1.2** 
+
+```{r}
+parent1 <- parent2 <- c("i", "A") 
+
+N <- 10000
+## or you can use sapply or a for.
+offsprings <- t(replicate(N, randomOffspring(parent1, parent2))) 
+
+pii_est <- nrow(offsprings[ offsprings[,1] == "i" & 
+                              offsprings[,2] == "i",  ]) / N 
+pii_est 
+
+
+
+pi_est <- nrow(offsprings[ offsprings[,1] == "i" | 
+                              offsprings[,2] == "i",  ]) / N 
+pi_est 
+```
+
+
+### 2.4 
+
+**Code the two generation scenario and sample phenotype of $C$**
+
+```{r}
+
+twoGenC <- function(){
+A <- randomOffspring(c("i","A"),  c("i","B"))
+B <- randomOffspring(c("A","B"), c("A","B"))
+
+C <- randomOffspring(A, B)
+return(list(A = A, B = B, C = C))  
+}
+
+twoGenC()
+```
+
+Sample 1000 phenotypes of $C$,
+
+```{r}
+phenotypesC <- replicate(1000, genotype2phenotype(twoGenC()$C))
+table(phenotypesC)
+
+table(phenotypesC) / 1000
+```
+
+Increase the number of sample
+
+```{r}
+N <- 100000
+phenotypesC <- replicate(N, genotype2phenotype(twoGenC()$C))
+table(phenotypesC)
+
+table(phenotypesC) / N
+```
+
+
+## Ex 3 DNA sequences
+
+Let 
+\[ \Omega = \{ A, T, C, G \} \]
+The sample space of a single DNA nucleotide type. 
+
+### 3.1 
+
+**Describe the sample space of DNA sequences of length 2** 
+
+
+\[ \Theta = \Omega \times \Omega = \Omega ^2 = \{ (A,A), (A,T), \ldots, (A,G), (T,A), (T,T) \ldots (G,G) \} \]
+
+### 3.2 
+
+**Describe the event of observing the motif ACG in a DNA sequence**
+**of length 5**
+
+\[ E = \{ ACG**,\,  *ACG*,\, **ACG \} \]
+where $*$ indicates whatever nucleotide in $\Omega$. 
+
+**Compute the probability of this event**
+
+Observe that the events $ACG**,\,  *ACG*,\, **ACG$ are disjoints. Thus,
+
+\[ P(E) =  P(ACG**)+ P(*ACG*) + P(**ACG) \]
+
+Moreover,
+\[P(ACG**) = P(*ACG*) = P(**ACG) = \left(\frac{1}{4}\right)^3   \]
+since the events in different positions are independent. 
+
+Thus,
+
+\[ P(E) = 3 \left( \frac{1}{4} \right)^3\]
+
+```{r}
+3 * (0.25)^3 
+```
+
+### 3.3 
+
+**Suppose we observe from a given position in the genome. We keep** 
+**observing until we find the nucleotide G. Describe the sample space **
+**of the**
+**observed DNA sequence. What is the probability that the DNA sequence**
+**observed before observing G has length 10?**
+
+\[ S = \{ G, *G, **G, ***G, \ldots \}  \]
+
+
+\[ P(\text{length sequence before observing G }= 10) 
+= (1-0.25)^{10} (0.25) \]
+
+```{r}
+(1-0.25)^(10) * (0.25)
+```
+
+### 3.4 
+
+**Now we remove the independence assumption. Suppose that the 
+probability of observing A,T,C or G given the previous nucleotide being C, is
+respectively 0.2, 0.2, 0.5, 0.1. In general in different locations of the DNA
+sequence, this conditional probabilities will be different and this fact is
+important for biological sequence detecting.**
+
+
+**Suppose we observe C at a given location, what is the probability of
+observing the motif CG immediately after?**
+
+\[ P( \text{observing CG starting from position 2}| 
+\text{observe C in position 1}) =  ?  \]
+
+Lets introduce three *extended* random variable $D_1$, $D_2$, $D_3$, 
+indicating the nucleotide in position 1,2 and 3. 
+\[ D_1, D_2, D_3 \]
+
+We want to compute,
+\[ P(D_2 = C, D_3 = G | D_1 = C) = 
+P(D_3 = G | D_2 = C , D_1 = C) P(D_2 = C | D_1 = C) =  \]
+\[ 0.1 \times 0.5 = 0.05  \]
+
+
+**Suppose now in a different region of the DNA sequence, the 
+conditional probabilities of A, T, C, G given C become 0.1, 0.2, 0.3, 0.4,
+then what is in that region the probability of observing CG given
+that we observed C in the previous location?**
+
+Similarly,
+
+\[ P(D_2 = C, D_3 = G | D_1 = C) = 
+P(D_3 = G | D_2 = C , D_1 = C) P(D_2 = C | D_1 = C) =  \]
+\[ 0.4 \times 0.3 = 0.12  \]
+
+
+## Ex 4 Some simulations
+
+### 4.1 
+
+```{r}
+
+simDNA <- function(length = 1, nucleotides = c("A", "T", "C", "G")){
+  sample(nucleotides, size = length, replace = TRUE)
+}
+
+estMotifProb <- function(length = 5, motif = c("A", "C", "G"), N = 1000){
+  S<-t(replicate(N, simDNA(length)))
+  
+  sum(apply(S, MARGIN = 1, FUN = function(dna){
+    length(grep(pattern = paste0(motif,collapse = ""), 
+                x = paste0(dna, collapse = ""), value = FALSE)) > 0 
+  } )) / N
+}
+
+estMotifProb(5, c("A", "C", "G"), 1000)
+
+```
+
+
+### 4.2
+
+```{r}
+
+tryBefore <- function(before = "G", max = Inf){
+  x <- simDNA(1)
+  k <- 0
+  while (x != before & k <= max ){
+    x <- simDNA(1)
+    k <- k + 1
+  }
+  return(k)
+}
+
+N <- 100000
+sum(replicate(N, tryBefore("G", 11)) == 10) / N
+```
+
+### 4.3 
+
+```{r}
+N <- 10000
+
+##estimation as before
+pest <- sapply(0:20, function(i){
+  sum(replicate(N, tryBefore("G", i + 1)) == i) / N
+})
+
+## real prob
+preal <- sapply(1:21, function(i){
+  return( 0.75^(i-1) * 0.25)
+})
+
+plot(0:20,pest, col = "blue")
+points(0:20, preal, col = "red")
+```
+
+
+## Ex 5  ISI data set
+
+We load the data 
+
+```{r}
+isidata <- read.table("neuronspikes.txt", col.names = "isi")
+isi <- isidata$isi ##here we have the vector of observations
+```
+
+### 5.1 
+
+Plotting the histogram
+
+```{r}
+hist(isi, breaks = 50, probability = TRUE)
+```
+
+### 5.2 
+
+```{r}
+hist(isi, breaks = 50, probability = TRUE)
+for (rate in seq(0.5, 1.5, 0.1)){
+  curve(dexp(x, rate = rate), add = TRUE, col = rate*10)
+}
+```
+
+
+Maybe a nice parameter can be $\lambda = 1.15$ 
+```{r}
+hist(isi, breaks = 50, probability = TRUE)
+curve(dexp(x, rate = 1.15), col = "red", add = TRUE)
+```
+
+### 5.3 
+
+
+```{r}
+rate <- 1.15 
+
+pexp(1, rate = rate)
+
+pexp(1.5, rate = rate) - pexp(0.5, rate = rate)
+```
+
+
+## Ex 6 Brain cell types data set
+
+We load the brain cell data set,
+```{r}
+cells <- read.csv("cell_types.csv", na.strings = "")
+```
+
+### 6.1 
+
+We use the parameter `na.strings = ""` to specify which string 
+(in this case the empty strig) is used as a placeholder for the
+`NA` value. 
+
+### 6.2 
+
+To find which observations are from human donors or mice, 
+firts of all we locate the appropriate variable in the data, and 
+secondly we check which are the possible values. 
+
+Lets list all the variables,
+```{r}
+colnames(cells)
+```
+
+we are interested in `donor__species`
+
+Since string are converted to factors ina  data.frame (thanks to 
+`read.csv` function), we can check the `levels`,
+```{r}
+levels(cells$donor__species)
+```
+
+So we can extract the observations from humans and from mice,
+```{r}
+human <- cells$donor__species == levels(cells$donor__species)[1]
+mouse <- cells$donor__species == levels(cells$donor__species)[2]
+```
+
+We check how many they are,
+```{r}
+sapply( list(human = human, mouse = mouse), sum)
+```
+
+The proportion of human cells in the data set is,
+
+```{r}
+sum(human) / nrow(cells)
+```
+
+### 6.3
+
+Histogram for the ramp spike time,
+
+```{r}
+hist(cells$ef__peak_t_ramp)
+```
+
+
+Separately for human cells,
+```{r}
+hist(cells$ef__peak_t_ramp[human])
+```
+
+and mice,
+```{r}
+hist(cells$ef__peak_t_ramp[mouse])
+```
+
+
+### 6.4 
+
+Plotting log-normal densities,
+
+```{r}
+firstplot <- F
+for (ml in seq(1.25, 3, 0.25)){
+  curve(dlnorm(x,meanlog =  ml, sdlog = 0.6),
+        from = 0, to = 20, add = firstplot, col = ml*4 )
+  firstplot <- TRUE
+}
+```
+
+### 6.5 
+
+Plot densities on top of histogram,
+```{r}
+hist(cells$ef__peak_t_ramp, freq = FALSE)
+for (ml in seq(1.25, 3, 0.25)){
+  curve(dlnorm(x,meanlog =  ml, sdlog = 0.6),
+        add = TRUE, col = ml*4 )
+ }
+```
+
+Probably meanlog = 1.5 or 1.75 
+
+```{r}
+ml <- 1.50 
+hist(cells$ef__peak_t_ramp, freq = FALSE)
+curve(dlnorm(x,meanlog =  ml, sdlog = 0.6),
+        add = TRUE, col = ml * 4)
+```
+
+```{r}
+ml <- 1.75
+hist(cells$ef__peak_t_ramp, freq = FALSE)
+curve(dlnorm(x,meanlog =  ml, sdlog = 0.6),
+        add = TRUE, col = ml * 4)
+```
+
+
+### 6.6 
+
+Only on top of the human observations,
+
+```{r}
+ml <- 1.50 
+hist(cells$ef__peak_t_ramp[human], freq = FALSE)
+curve(dlnorm(x,meanlog =  ml, sdlog = 0.6),
+        add = TRUE, col = ml * 4)
+```
+
+```{r}
+ml <- 1.75
+hist(cells$ef__peak_t_ramp[human], freq = FALSE)
+curve(dlnorm(x,meanlog =  ml, sdlog = 0.6),
+        add = TRUE, col = ml * 4)
+```
+
+
